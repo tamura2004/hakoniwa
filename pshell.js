@@ -3,13 +3,10 @@ t1.setHeight("470px");
 t1.setWidth("100%");
 document.getElementById("terminal").appendChild(t1.html);
 
-const baseName = function (path) {
-  return path.split("/").pop();
-}
-
-const dirName = function (path) {
-  return path.split("/").slice(0, -1).join("/") || "/";
-}
+const baseName = (path) => path.split("/").pop();
+const dirName = (path) => path.split("/").slice(0, -1).join("/") || "/";
+const isFile = (path) => files[path] && files[path]["body"];
+const isDir = (path) => !isFile(path);
 
 const absoluteName = function (path) {
   if (!path) return null;
@@ -17,14 +14,6 @@ const absoluteName = function (path) {
   if (path.charAt() === "/") return path;
   if (pwd == "/") return pwd + path;
   return pwd + "/" + path;
-}
-
-const isFile = function (path) {
-  return files[path] && files[path]["body"];
-}
-
-const isDir = function (path) {
-  return !isFile(path);
 }
 
 const files = {
@@ -40,15 +29,104 @@ const files = {
   },
 };
 
-let pwd = "/";
-let host = "localhost";
-let user = "user";
-const lines = [`Hello ${user} from ${host}`, "　"];
-const println = function (line) {
-  lines.push(line);
+const flags = [
+  "22811dd94d65037ef86535740b98dec8",
+  "0a840ef45467fb3932dbf2c2896c5cbf",
+  "bcd31c714bca2c41ffca31bd03003311",
+  "e7e94d9ef1edaf2c6c55e9966b551295",
+  "axurolifczwtqnkhebyvspmjgdaxurol",
+  "0d815852151a1a5a24965765c165742d",
+  "97f014516561ef487ec368d6158eb3f4",
+  "aqws",
+  "51be5f1bee407854a1442ae9e1397d3b",
+  "thequickbrownfoxjumpsoverthelazydog",
+];
+
+const hosts = {
+  "192.168.21.1" : { name: "sfsv2101", telnet: true },
+  "192.168.21.2" : { name: "sfsv2102", telnet: true },
+  "192.168.21.3" : { name: "sfsv2103", telnet: true },
+  "192.168.21.4" : { name: "sfsv2104", telnet: true },
+  "192.168.11.1" : { name: "sfsv1101", telnet: true },
+  "192.168.11.2" : { name: "sfsv1102", telnet: true },
+  "192.168.11.3" : { name: "sfsv1103", telnet: true },
+  "192.168.21.151" : { name: "sfrt0021" },
+  "192.168.11.151" : { name: "sfrt0011" },
 }
 
+let pwd = "/";
+let ip = "192.168.21.3";
+let mask = "255.255.255.0";
+let gataway = "192.168.21.151";
+let user = "user";
+
+const println = (line) => lines.push(line);
+const hostname = () => hosts[ip].name;
+const hello = () => `Hello ${user} from ${hostname()}`;
+const lines = [hello(), "　"];
+
 const commands = {
+  dig: {
+    run: function({ args }) {
+      const name = args[2];
+      println(";; QUESTION SECTION");
+      println(`;${name} IN A`);
+      for (const addr in hosts) {
+        if (hosts[addr].name == name) {
+          println(`${name} 2917 IN A ${addr}`);
+          return;
+        }
+      }
+      println("Nothing found.");
+    }
+  },
+  telnet: {
+    run: function({ args }) {
+      const key = args[2];
+      if (servers[key] && servers[key].telnet) {
+        ip = key;
+        hostname = servers[key].hostname;
+        println("USER:");
+        println("PASSWORD:");
+        println(hello());
+      } else {
+        println("Request timed out.");
+      }
+    }
+  },
+  ping: {
+    run: function({ args }) {
+      println(`PING ${args[2]} 56(84) bytes of data.`);
+      if (servers[args[2]]) {
+        for (let i = 0; i < 4; i++) println(`64 bytes from ${args[2]}: icmp_seq=${i+1} ttl=128 time=0.124 ms`);
+        println(`3 packets transmitted, 3 received, 0% packet loss, time 0.372 ms`);
+      } else {
+        for (let i = 0; i < 4; i++) println(`Request timed out`);
+        println(`3 packets transmitted, 0 received, 100% packet loss.`);
+      }
+    }
+  },
+  ifconfig: {
+    run: function() {
+      println("eth0: flags=<UP,BRORSCAST,RUNNING,MULTICAST> mtu 1500");
+      println(`inet ${net.ip} mask ${net.mask} gateway ${net.gataway}`);
+    }
+  },
+  hostname: {
+    run: function() {
+      println(hostname);
+    }
+  },
+  whoami: {
+    run: function() {
+      println(user);
+    }
+  },
+  gettheflag: {
+    run: function({ args }) {
+      println(flags[++args[2]]);
+    }
+  },
   su: {
     usage: "su [USER]",
     description: "Change user.",
@@ -163,6 +241,11 @@ const commands = {
     }
   }
 };
+
+// alias
+commands.nslookup = commands.dig;
+commands.ipconfig = commands.ifconfig;
+commands.dir = commands.ls;
 
 const repl = function () {
   t1.clear();
