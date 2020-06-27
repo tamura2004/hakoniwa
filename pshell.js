@@ -67,13 +67,12 @@ const lines = [hello(), "　"];
 
 const commands = {
   dig: {
-    run: function({ args }) {
-      const name = args[2];
+    run: function({ it }) {
       println(";; QUESTION SECTION");
-      println(`;${name} IN A`);
+      println(`;${it} IN A`);
       for (const addr in hosts) {
-        if (hosts[addr].name == name) {
-          println(`${name} 2917 IN A ${addr}`);
+        if (hosts[addr].name === it) {
+          println(`${it} 2917 IN A ${addr}`);
           return;
         }
       }
@@ -81,11 +80,9 @@ const commands = {
     }
   },
   telnet: {
-    run: function({ args }) {
-      const key = args[2];
-      if (servers[key] && servers[key].telnet) {
-        ip = key;
-        hostname = servers[key].hostname;
+    run: function({ it }) {
+      if (hosts[it] && hosts[it].telnet) {
+        ip = it;
         println("USER:");
         println("PASSWORD:");
         println(hello());
@@ -95,10 +92,10 @@ const commands = {
     }
   },
   ping: {
-    run: function({ args }) {
-      println(`PING ${args[2]} 56(84) bytes of data.`);
-      if (servers[args[2]]) {
-        for (let i = 0; i < 4; i++) println(`64 bytes from ${args[2]}: icmp_seq=${i+1} ttl=128 time=0.124 ms`);
+    run: function({ it }) {
+      println(`PING ${it} 56(84) bytes of data.`);
+      if (hosts[it]) {
+        for (let i = 0; i < 4; i++) println(`64 bytes from ${it}: icmp_seq=${i+1} ttl=128 time=0.124 ms`);
         println(`3 packets transmitted, 3 received, 0% packet loss, time 0.372 ms`);
       } else {
         for (let i = 0; i < 4; i++) println(`Request timed out`);
@@ -109,12 +106,12 @@ const commands = {
   ifconfig: {
     run: function() {
       println("eth0: flags=<UP,BRORSCAST,RUNNING,MULTICAST> mtu 1500");
-      println(`inet ${net.ip} mask ${net.mask} gateway ${net.gataway}`);
+      println(`inet ${ip} mask ${mask} gateway ${gataway}`);
     }
   },
   hostname: {
     run: function() {
-      println(hostname);
+      println(hostname());
     }
   },
   whoami: {
@@ -123,16 +120,15 @@ const commands = {
     }
   },
   gettheflag: {
-    run: function({ args }) {
-      println(flags[++args[2]]);
+    run: function({ it }) {
+      println(flags[++it]);
     }
   },
   su: {
     usage: "su [USER]",
     description: "Change user.",
-    run: function({args}) {
-      user = args[2];
-      println(`change user to ${user}`);
+    run: function({ it }) {
+      println(`change user to ${it}`);
     },
   },
   help: {
@@ -147,13 +143,13 @@ const commands = {
   man: {
     usage: "man [CMD]",
     description: "Print command usage.",
-    run: function ({ args }) {
-      const ref = commands[args[2]];
+    run: function ({ it }) {
+      const ref = commands[it];
       if (ref) {
         lines.push(ref["usage"]);
         lines.push(ref["description"]);
       } else {
-        lines.push(`No such command: ${args[2]}`);
+        lines.push(`No such command: ${it}`);
       }
     }
   },
@@ -246,6 +242,7 @@ const commands = {
 commands.nslookup = commands.dig;
 commands.ipconfig = commands.ifconfig;
 commands.dir = commands.ls;
+commands.ll = commands.ls;
 
 const repl = function () {
   t1.clear();
@@ -257,11 +254,12 @@ const repl = function () {
 
     let args = input.split(" ");
     let cmd = args[1] || "help";
+    let it = args[2] || "";
     let path = absoluteName(args[2]);
     let dest = absoluteName(args[3]);
 
     if (commands[cmd]) {
-      commands[cmd]["run"]({ args, cmd, path, dest });
+      commands[cmd]["run"]({ args, cmd, it, path, dest });
     } else {
       lines.push(`Command '${cmd}' not found`);
     }
