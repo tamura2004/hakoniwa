@@ -138,7 +138,8 @@ const commands = {
     description: "Print command summary.",
     run: function () {
       for (const key in commands) {
-        println(`${key}: ${commands[key].description}`);
+        const { description } = commands[key];
+        if (description) println(`${key}: ${description}`);
       }
     }
   },
@@ -146,10 +147,10 @@ const commands = {
     usage: "man [CMD]",
     description: "Print command usage.",
     run: function ({ it }) {
-      const ref = commands[it];
-      if (ref) {
-        println(ref.usage);
-        println(ref.description);
+      const { usage, description } = commands[it];
+      if (usage) {
+        println(usage);
+        println(description);
       } else {
         println(`No such command: ${it}`);
       }
@@ -245,8 +246,7 @@ const commands = {
   },
   which: {
     run: function({ it }) {
-      const ref = commands[it];
-      if (ref) {
+      if (commands[it]) {
         println(`/usr/local/bin/${it}`);
       } else {
         println("Nothing found.")
