@@ -5,7 +5,7 @@ document.getElementById("terminal").appendChild(t1.html);
 
 const baseName = (path) => path.split("/").pop();
 const dirName = (path) => path.split("/").slice(0, -1).join("/") || "/";
-const isFile = (path) => files[path] && files[path]["body"];
+const isFile = (path) => files[path] && files[path].body;
 const isDir = (path) => !isFile(path);
 
 const absoluteName = function (path) {
@@ -15,19 +15,6 @@ const absoluteName = function (path) {
   if (pwd == "/") return pwd + path;
   return pwd + "/" + path;
 }
-
-const files = {
-  "/": {},
-  "/etc": {},
-  "/var": {},
-  "/var/log": {},
-  "/var/log/messages": {
-    "body": ["one", "two", "three"]
-  },
-  "/etc/password": {
-    "body": ["# Don't look me!", "Flag{e1a2eag2ag2ag22h2d22hg}"]
-  },
-};
 
 const flags = [
   "22811dd94d65037ef86535740b98dec8",
@@ -41,6 +28,21 @@ const flags = [
   "51be5f1bee407854a1442ae9e1397d3b",
   "thequickbrownfoxjumpsoverthelazydog",
 ];
+
+const files = {
+  "/": {},
+  "/usr": {},
+  "/usr/local": {},
+  "/usr/local/bin": {},
+  "/usr/local/bin/help": {},
+  "/usr/local/bin/man": {},
+  "/usr/local/bin/pwd": {},
+  "/etc": {},
+  "/var": {},
+  "/var/log": {},
+  "/var/log/messages": { body: ["one", "two", "three"] },
+  "/etc/password": { body: flags },
+};
 
 const hosts = {
   "192.168.21.1" : { name: "sfsv2101", telnet: true },
@@ -136,7 +138,7 @@ const commands = {
     description: "Print command summary.",
     run: function () {
       for (const key in commands) {
-        lines.push(`${key}: ${commands[key]["description"]}`);
+        println(`${key}: ${commands[key].description}`);
       }
     }
   },
@@ -146,10 +148,10 @@ const commands = {
     run: function ({ it }) {
       const ref = commands[it];
       if (ref) {
-        lines.push(ref["usage"]);
-        lines.push(ref["description"]);
+        println(ref.usage);
+        println(ref.description);
       } else {
-        lines.push(`No such command: ${it}`);
+        println(`No such command: ${it}`);
       }
     }
   },
@@ -159,9 +161,9 @@ const commands = {
     run: function ({ path }) {
       if (isDir(path)) {
         pwd = path;
-        lines.push(path);
+        println(path);
       } else {
-        lines.push(`${path}: No such directory`);
+        println(`${path}: No such directory`);
       }
     }
   },
@@ -171,9 +173,9 @@ const commands = {
     run: function ({ path }) {
       if (files[path]) {
         delete files[path];
-        lines.push(`${path} was removed`);
+        println(`${path} was removed`);
       } else {
-        lines.push(`${path}: No such file or directory`);
+        println(`${path}: No such file or directory`);
       }
     }
   },
@@ -183,9 +185,9 @@ const commands = {
     run: function ({ path, dest }) {
       if (files[path]) {
         files[dest] = files[path];
-        lines.push(`${dest} was copyed from ${path}`);
+        println(`${dest} was copyed from ${path}`);
       } else {
-        lines.push(`${path}: No such file or directory`);
+        println(`${path}: No such file or directory`);
       }
     }
   },
@@ -196,9 +198,9 @@ const commands = {
       if (files[path]) {
         files[dest] = files[path];
         delete files[path];
-        lines.push(`${dest} was moved from ${path}`);
+        println(`${dest} was moved from ${path}`);
       } else {
-        lines.push(`${path}: No such file or directory`);
+        println(`${path}: No such file or directory`);
       }
     }
   },
@@ -206,7 +208,7 @@ const commands = {
     usage: "pwd [no option]",
     description: "Print currenct working directory.",
     run: function () {
-      lines.push(pwd);
+      println(pwd);
     }
   },
   ls: {
@@ -216,23 +218,38 @@ const commands = {
       let count = 0;
       for (const key in files) {
         if (pwd === dirName(key)) {
-          lines.push(key);
+          println(key);
           count++;
         }
       }
-      lines.push(`total ${count}`);
+      println(`total ${count}`);
     }
   },
   cat: {
     usage: "cat [FILE]",
     description: "Print file content.",
     run: function ({ path }) {
-      if (files[path] && files[path]["body"]) {
-        for (const line of files[path]["body"]) {
-          lines.push(line);
+      if (files[path] && files[path].body) {
+        for (const line of files[path].body) {
+          println(line);
         }
       } else {
-        lines.push(`${path}: No such file or directory`)
+        println(`${path}: No such file or directory`)
+      }
+    }
+  },
+  cls: {
+    run: function() {
+      while (lines.length > 0) lines.shift();
+    }
+  },
+  which: {
+    run: function({ it }) {
+      const ref = commands[it];
+      if (ref) {
+        println(`/usr/local/bin/${it}`);
+      } else {
+        println("Nothing found.")
       }
     }
   }
@@ -243,6 +260,8 @@ commands.nslookup = commands.dig;
 commands.ipconfig = commands.ifconfig;
 commands.dir = commands.ls;
 commands.ll = commands.ls;
+commands.clear = commands.cls;
+commands.where = commands.which;
 
 const repl = function () {
   t1.clear();
@@ -250,7 +269,7 @@ const repl = function () {
   for (let i = 0; i < lines.length; i++) t1.print(lines[i]);
 
   t1.input("", function (input) {
-    lines.push(input);
+    println(input);
 
     let args = input.split(" ");
     let cmd = args[1] || "help";
@@ -261,9 +280,9 @@ const repl = function () {
     if (commands[cmd]) {
       commands[cmd]["run"]({ args, cmd, it, path, dest });
     } else {
-      lines.push(`Command '${cmd}' not found`);
+      println(`Command '${cmd}' not found`);
     }
-    lines.push("　");
+    println("　");
     repl();
   });
 };
