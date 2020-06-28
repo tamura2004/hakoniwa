@@ -94,6 +94,7 @@ var Terminal = (function () {
 		this.print = function (message) {
 			var newLine = document.createElement('div')
 			newLine.textContent = message
+			newLine.style.height = '20px'
 			this._output.appendChild(newLine)
 		}
 
@@ -160,6 +161,7 @@ var Terminal = (function () {
 		this.html.style.margin = '0'
 		this._innerWindow.style.padding = '10px'
 		this._input.style.margin = '0'
+		this._input.style.height = '20px'
 		this._output.style.margin = '0'
 		this._cursor.style.background = 'white'
 		this._cursor.innerHTML = 'C' //put something in the cursor..

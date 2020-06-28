@@ -1,5 +1,5 @@
 const t1 = new Terminal();
-t1.setHeight("470px");
+t1.setHeight("100%");
 t1.setWidth("100%");
 document.getElementById("terminal").appendChild(t1.html);
 
@@ -16,6 +16,29 @@ const absoluteName = function (path) {
   return pwd + "/" + path;
 }
 
+const files = {
+  "/": {},
+  "/usr": {},
+  "/usr/local": {},
+  "/usr/local/bin": {},
+  "/etc": {},
+  "/var": {},
+  "/var/log": {},
+  "/var/log/messages": { body: ["one", "two", "three"] },
+};
+
+const hosts = {
+  server211: { ip: "192.168.21.1" },
+  server212: { ip: "192.168.21.2" },
+  server213: { ip: "192.168.21.3" },
+  router210: { ip: "192.168.21.100" },
+  server001: { ip: "192.168.0.1" },
+  server001: { ip: "192.168.0.2" },
+  server001: { ip: "192.168.0.3" },
+  router000: { ip: "192.168.0.100" },
+  localhost: { ip: "192.168.0.1" },
+}
+
 const flags = [
   "22811dd94d65037ef86535740b98dec8",
   "0a840ef45467fb3932dbf2c2896c5cbf",
@@ -29,42 +52,17 @@ const flags = [
   "thequickbrownfoxjumpsoverthelazydog",
 ];
 
-const files = {
-  "/": {},
-  "/usr": {},
-  "/usr/local": {},
-  "/usr/local/bin": {},
-  "/usr/local/bin/help": {},
-  "/usr/local/bin/man": {},
-  "/usr/local/bin/pwd": {},
-  "/etc": {},
-  "/var": {},
-  "/var/log": {},
-  "/var/log/messages": { body: ["one", "two", "three"] },
-  "/etc/password": { body: flags },
-};
-
-const hosts = {
-  "192.168.21.1" : { name: "sfsv2101", telnet: true },
-  "192.168.21.2" : { name: "sfsv2102", telnet: true },
-  "192.168.21.3" : { name: "sfsv2103", telnet: true },
-  "192.168.21.4" : { name: "sfsv2104", telnet: true },
-  "192.168.11.1" : { name: "sfsv1101", telnet: true },
-  "192.168.11.2" : { name: "sfsv1102", telnet: true },
-  "192.168.11.3" : { name: "sfsv1103", telnet: true },
-  "192.168.21.151" : { name: "sfrt0021" },
-  "192.168.11.151" : { name: "sfrt0011" },
-}
+files["/etc/password"] = { body: flags };
 
 let pwd = "/";
-let ip = "192.168.21.3";
+let host = "localhost";
 let mask = "255.255.255.0";
-let gataway = "192.168.21.151";
-let user = "user";
+let gataway = "192.168.0.100";
+let user = "guest";
 
 const println = (line) => lines.push(line);
-const hostname = () => hosts[ip].name;
-const hello = () => `Hello ${user} from ${hostname()}`;
+const ip = () => hosts[host] && hosts[host].ip;
+const hello = () => `Hello ${user} from ${host}`;
 const lines = [hello(), "　"];
 
 const commands = {
@@ -72,43 +70,45 @@ const commands = {
     run: function({ it }) {
       println(";; QUESTION SECTION");
       println(`;${it} IN A`);
-      for (const addr in hosts) {
-        if (hosts[addr].name === it) {
-          println(`${it} 2917 IN A ${addr}`);
-          return;
-        }
+      if (hosts[it]) {
+        println(`${it} 2917 IN A ${hosts[it].ip}`);
+      } else {
+        println("Nothing found.");
       }
-      println("Nothing found.");
     }
   },
   telnet: {
     run: function({ it }) {
-      if (hosts[it] && hosts[it].telnet) {
-        ip = it;
-        println("USER:");
-        println("PASSWORD:");
-        println(hello());
-      } else {
-        println("Request timed out.");
+      for (const key in hosts) {
+        if (it === key.ip) {
+          host = key;
+          println("USER:");
+          println("PASSWORD:");
+          println(hello());
+          return;
+        }
       }
+      println(`Invalid IP ADDRESS: ${it}`);
     }
   },
   ping: {
     run: function({ it }) {
       println(`PING ${it} 56(84) bytes of data.`);
-      if (hosts[it]) {
-        for (let i = 0; i < 4; i++) println(`64 bytes from ${it}: icmp_seq=${i+1} ttl=128 time=0.124 ms`);
-        println(`3 packets transmitted, 3 received, 0% packet loss, time 0.372 ms`);
-      } else {
-        for (let i = 0; i < 4; i++) println(`Request timed out`);
-        println(`3 packets transmitted, 0 received, 100% packet loss.`);
+      for (const key in hosts) {
+        if (it == key.ip) {
+          for (let i = 0; i < 4; i++) println(`64 bytes from ${it}: icmp_seq=${i+1} ttl=128 time=0.124 ms`);
+          println(`3 packets transmitted, 3 received, 0% packet loss, time 0.372 ms`);
+          return;
+        }
       }
+      for (let i = 0; i < 4; i++) println(`Request timed out`);
+      println(`3 packets transmitted, 0 received, 100% packet loss.`);
     }
   },
   ifconfig: {
     run: function() {
       println("eth0: flags=<UP,BRORSCAST,RUNNING,MULTICAST> mtu 1500");
-      println(`inet ${ip} mask ${mask} gateway ${gataway}`);
+      println(`inet ${hosts[host].ip} mask ${mask} gateway ${gataway}`);
     }
   },
   hostname: {
@@ -127,15 +127,11 @@ const commands = {
     }
   },
   su: {
-    usage: "su [USER]",
-    description: "Change user.",
     run: function({ it }) {
       println(`change user to ${it}`);
     },
   },
   help: {
-    usage: "help [no option]",
-    description: "Print command summary.",
     run: function () {
       for (const key in commands) {
         const { description } = commands[key];
@@ -144,8 +140,6 @@ const commands = {
     }
   },
   man: {
-    usage: "man [CMD]",
-    description: "Print command usage.",
     run: function ({ it }) {
       const { usage, description } = commands[it];
       if (usage) {
@@ -263,26 +257,36 @@ commands.ll = commands.ls;
 commands.clear = commands.cls;
 commands.where = commands.which;
 
+// add exec file
+for (const cmd in commands) {
+  files["/usr/local/bin/" + cmd] = {};
+}
+
+const scrollOut = function() {
+  const h = t1.html.clientHeight;
+  while (lines.length > Number((h - 20) / 20) - 1) lines.shift();
+};
+
 const repl = function () {
   t1.clear();
-  while (lines.length > 24) lines.shift();
+  scrollOut();
   for (let i = 0; i < lines.length; i++) t1.print(lines[i]);
 
   t1.input("", function (input) {
     println(input);
 
     let args = input.split(" ");
-    let cmd = args[1] || "help";
+    let cmd = args[1] || "";
     let it = args[2] || "";
     let path = absoluteName(args[2]);
     let dest = absoluteName(args[3]);
 
     if (commands[cmd]) {
       commands[cmd]["run"]({ args, cmd, it, path, dest });
-    } else {
+      println("　");
+    } else if (cmd !== ""){
       println(`Command '${cmd}' not found`);
     }
-    println("　");
     repl();
   });
 };
