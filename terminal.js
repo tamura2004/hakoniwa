@@ -28,7 +28,8 @@ var Terminal = (function () {
 		inputField.style.opacity = '0'
 		inputField.style.fontSize = '0.2em'
 
-		terminalObj._inputLine.textContent = '$ '
+		terminalObj._prompt.textContent = '$ '
+		terminalObj._inputLine.textContent = ''
 		terminalObj._input.style.display = 'block'
 		terminalObj.html.appendChild(inputField)
 		fireCursorInterval(inputField, terminalObj)
@@ -85,7 +86,10 @@ var Terminal = (function () {
 
 		this._innerWindow = document.createElement('div')
 		this._output = document.createElement('p')
+		this._prompt = document.createElement('span') //the span element where the users input is put
+		this._prompt.className = "prompt"
 		this._inputLine = document.createElement('span') //the span element where the users input is put
+		this._inputLine.className = "inputline"
 		this._cursor = document.createElement('span')
 		this._input = document.createElement('p') //the full element administering the user input, including cursor
 
@@ -145,6 +149,7 @@ var Terminal = (function () {
 			this._shouldBlinkCursor = (bool === 'TRUE' || bool === '1' || bool === 'YES')
 		}
 
+		this._input.appendChild(this._prompt)
 		this._input.appendChild(this._inputLine)
 		this._input.appendChild(this._cursor)
 		this._innerWindow.appendChild(this._output)

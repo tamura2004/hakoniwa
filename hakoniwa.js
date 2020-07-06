@@ -310,15 +310,15 @@ const repl = function () {
   for (let i = 0; i < lines.length; i++) t1.print(lines[i]);
 
   t1.input("", function (input) {
-    println(input);
+    println("$ " + input);
 
     let args = input.split(" ");
-    let cmd = args[1];
-    let it = args[2];
-    let that = args[3];
-    let them = args[4];
-    let path = client.absoluteName(args[2]);
-    let dest = client.absoluteName(args[3]);
+    let cmd = args[0];
+    let it = args[1];
+    let that = args[2];
+    let them = args[3];
+    let path = client.absoluteName(args[1]);
+    let dest = client.absoluteName(args[2]);
 
     if (commands[cmd]) {
       const line = commands[cmd]["run"]({ args, cmd, it, that, them, path, dest });
